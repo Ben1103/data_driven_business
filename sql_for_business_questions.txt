@@ -1,0 +1,363 @@
+--Business questions
+
+--What categories of tech products does Magist have?
+
+SELECT product_category_name_english
+FROM product_category_name_translation
+ORDER BY 1;
+--then just selected categories that sound tech-y
+
+/*
+'computers'
+'computers_accessories'
+'pc_gamer'
+'telephony'
+*/
+
+
+
+
+
+--How many products of these tech categories have been sold (within the time window of the database snapshot)? What percentage does that represent from the overall number of products sold?
+
+--Number of tech products sold
+SELECT COUNT(order_items.product_id)
+FROM product_category_name_translation
+JOIN products
+	ON products.product_category_name = product_category_name_translation.product_category_name
+JOIN order_items
+	ON order_items.product_id = products.product_id
+    WHERE product_category_name_english = "computers"
+OR product_category_name_english = "computers_accessories"
+OR product_category_name_english = "pc_gamer"
+OR product_category_name_english = "telephony";
+
+--'12584'
+
+
+
+--Tech as percentage of total sold
+SELECT
+(SELECT COUNT(order_items.product_id)
+FROM product_category_name_translation
+JOIN products
+	ON products.product_category_name = product_category_name_translation.product_category_name
+JOIN order_items
+	ON order_items.product_id = products.product_id
+    WHERE product_category_name_english = "computers"
+OR product_category_name_english = "computers_accessories"
+OR product_category_name_english = "pc_gamer"
+OR product_category_name_english = "telephony")
+/
+(SELECT COUNT(product_id)
+FROM order_items)
+
+--'0.1117'
+
+
+
+
+
+
+--What’s the average price of the products being sold?
+
+SELECT AVG(price)
+FROM order_items;
+
+--'120.65373902991884'
+
+
+
+
+
+
+--Are expensive tech products popular?
+
+--prices of tech at magist
+SELECT product_category_name_translation.product_category_name_english, MAX(order_items.price), MIN(order_items.price), AVG(order_items.price)
+FROM orders
+JOIN order_items
+	ON orders.order_id = order_items.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON product_category_name_translation.product_category_name = products.product_category_name
+WHERE product_category_name_translation.product_category_name_english = "computers" 
+OR product_category_name_translation.product_category_name_english = "computers_accessories" 
+OR product_category_name_translation.product_category_name_english = "pc_gamer" 
+OR product_category_name_translation.product_category_name_english = "telephony"
+GROUP BY 1;
+
+/*
+# product_category_name_english, MAX(order_items.price), MIN(order_items.price), AVG(order_items.price)
+computers_accessories, 3699.99, 3.9, 116.51390283098924
+pc_gamer, 239, 129.99, 171.77222527398004
+computers, 6729, 34.5, 1098.340541294643
+telephony, 2428, 5, 71.21397786418466
+*/
+
+
+
+
+--tech items sold > 185,88
+SELECT COUNT(order_items.product_id)
+FROM order_items
+JOIN orders
+	ON orders.order_id = order_items.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON product_category_name_translation.product_category_name = products.product_category_name
+WHERE product_category_name_translation.product_category_name_english = "computers_accessories"
+OR product_category_name_translation.product_category_name_english = "computers" 
+OR product_category_name_translation.product_category_name_english = "pc_gamer" 
+OR product_category_name_translation.product_category_name_english = "telephony"
+AND order_items.price > 185.88;
+
+--'8480'
+
+
+
+--tech items sold > 3020,32
+SELECT COUNT(order_items.product_id)
+FROM order_items
+JOIN orders
+	ON orders.order_id = order_items.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON product_category_name_translation.product_category_name = products.product_category_name
+WHERE product_category_name_translation.product_category_name_english = "computers_accessories"
+OR product_category_name_translation.product_category_name_english = "computers" 
+OR product_category_name_translation.product_category_name_english = "pc_gamer" 
+OR product_category_name_translation.product_category_name_english = "telephony"
+AND order_items.price > 3020.32;
+
+--'8039'
+
+
+
+--computer accessories sold > 185,88
+SELECT COUNT(order_items.product_id)
+FROM order_items
+JOIN orders
+	ON orders.order_id = order_items.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON product_category_name_translation.product_category_name = products.product_category_name
+WHERE product_category_name_translation.product_category_name_english = "computers_accessories"
+AND order_items.price > 185.88;
+
+--'944'
+
+
+
+--computer accessories sold > 3020,32
+SELECT COUNT(order_items.product_id)
+FROM order_items
+JOIN orders
+	ON orders.order_id = order_items.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON product_category_name_translation.product_category_name = products.product_category_name
+WHERE product_category_name_translation.product_category_name_english = "computers_accessories"
+AND order_items.price > 3020.32;
+
+--'1'
+
+
+
+
+
+
+--How many sellers are there?
+
+SELECT COUNT(DISTINCT(seller_id))
+FROM sellers;
+
+--'3095'
+
+
+
+
+
+
+--What’s the average monthly revenue of Magist’s sellers?
+
+WITH seller_totals
+AS
+(SELECT sellers.seller_id, SUM(order_items.price) as total_per_seller
+FROM sellers
+JOIN order_items
+	ON sellers.seller_id = order_items.seller_id
+GROUP BY 1)
+SELECT AVG(total_per_seller)
+FROM seller_totals;
+
+--'4391.48423318913'
+
+
+
+
+
+
+--What’s the average revenue of sellers that sell tech products?
+
+--average monthly income for tech
+WITH seller_totals
+AS
+(SELECT sellers.seller_id, SUM(order_items.price) as total_per_seller
+FROM sellers
+JOIN order_items
+	ON sellers.seller_id = order_items.seller_id
+JOIN products
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON product_category_name_translation.product_category_name = products.product_category_name
+WHERE product_category_name_english = "computers" OR "computers_accessories" OR "pc_gamer" OR "telephony"
+GROUP BY 1)
+SELECT AVG(total_per_seller)
+FROM seller_totals;
+
+--'24773.681098090277'
+
+
+
+--average monthly income for computer accessories
+WITH seller_totals
+AS
+(SELECT sellers.seller_id, SUM(order_items.price) as total_per_seller
+FROM sellers
+JOIN order_items
+	ON sellers.seller_id = order_items.seller_id
+JOIN products
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON product_category_name_translation.product_category_name = products.product_category_name
+WHERE product_category_name_english = "computers_accessories"
+GROUP BY 1)
+SELECT AVG(total_per_seller)
+FROM seller_totals;
+
+--'3177.541175812379'
+
+
+
+
+
+
+--What’s the average time between the order being placed and the product being delivered?
+
+SELECT AVG(TIMESTAMPDIFF(DAY, order_purchase_timestamp, order_delivered_customer_date))
+FROM orders;
+
+--'12.0960'
+
+
+
+
+
+
+--How many orders are delivered on time vs orders delivered with a delay?
+
+--delivered on or before estimated delivery time
+SELECT
+(SELECT COUNT(order_id)
+FROM orders
+WHERE TIMESTAMPDIFF(SECOND, order_purchase_timestamp, order_delivered_customer_date) <= TIMESTAMPDIFF(SECOND, order_purchase_timestamp, order_estimated_delivery_date))
+/
+(SELECT COUNT(order_id)
+FROM orders)
+
+--'0.8915'
+
+
+
+--avg estimated delivery date
+SELECT AVG(TIMESTAMPDIFF(DAY, order_purchase_timestamp, order_estimated_delivery_date))
+FROM orders;
+
+--'23.4036'
+
+
+
+
+
+
+--Is there any pattern for delayed orders, e.g. big products being delayed more often?
+
+--delivery rate over 1000g
+SELECT
+(SELECT COUNT(orders.order_id)
+FROM orders
+JOIN order_items
+	ON order_items.order_id = orders.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+WHERE TIMESTAMPDIFF(SECOND, order_purchase_timestamp, order_delivered_customer_date) <= TIMESTAMPDIFF(SECOND, order_purchase_timestamp, order_estimated_delivery_date)
+AND orders.order_status = 'delivered'
+AND products.product_weight_g > 1000)
+/
+(SELECT COUNT(orders.order_id)
+FROM orders
+JOIN order_items
+	ON order_items.order_id = orders.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+WHERE products.product_weight_g > 1000)
+
+--'0.8954'
+
+
+
+--delivery rate over 2000g
+
+--'0.8913'
+
+
+
+--delivery rate over 5000g
+
+--'0.8907'
+
+
+
+--delivery rate of items too big for a Small Deutsche Post box (25 x 17,5 x 10)
+SELECT
+(SELECT COUNT(orders.order_id)
+FROM orders
+JOIN order_items
+	ON order_items.order_id = orders.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+WHERE TIMESTAMPDIFF(SECOND, order_purchase_timestamp, order_delivered_customer_date) <= TIMESTAMPDIFF(SECOND, order_purchase_timestamp, order_estimated_delivery_date)
+AND orders.order_status = 'delivered'
+AND products.product_length_cm >= 25
+AND products.product_width_cm >= 17.5
+AND products.product_height_cm >= 10)
+/
+(SELECT COUNT(orders.order_id)
+FROM orders
+JOIN order_items
+	ON order_items.order_id = orders.order_id
+JOIN products
+	ON products.product_id = order_items.product_id
+WHERE products.product_length_cm >= 25
+AND products.product_width_cm >= 17.5
+AND products.product_height_cm >= 10)
+
+--'0.8974'
+
+
+
+--delivery rate of items too big for a Medium Deutsche Post box (37,5 x 30 x 13,5)
+
+--'0.8875'
+
+
+
+--delivery rate of items too big for a Large Deutsche Post box (45 x 35 x 20)
+
+--'0.8798'

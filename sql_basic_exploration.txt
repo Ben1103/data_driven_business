@@ -1,0 +1,436 @@
+--Basic Exploration
+
+--How many orders are there in the dataset? The orders table contains a row for each order, so it should be easy to find out!
+
+SELECT COUNT(*)
+FROM orders;
+
+--99441
+
+
+
+
+
+--Are orders actually delivered? Look at columns in the orders table: one of them is called order_status. Most orders seem to be delivered, but some aren’t. Find out how many orders are delivered and how many are cancelled, unavailable or in any other status by selecting a count and aggregating by this column.
+
+SELECT order_status, COUNT(order_id)
+FROM orders
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/*
+order_status, COUNT(DISTINCT(order_id))
+delivered, 96478
+shipped, 1107
+canceled, 625
+unavailable, 609
+invoiced, 314
+processing, 301
+created, 5
+approved, 2
+*/
+
+
+
+
+
+--Is Magist having user growth? A platform losing users left and right isn’t going to be very useful to us. It would be a good idea to check for number of orders grouped by year and month. Tip: you can use the functions YEAR() and MONTH() to separate the year and the month of the order_purchase_timestamp.
+
+--unique customers who ordered per year
+SELECT YEAR(order_purchase_timestamp), COUNT(DISTINCT(customer_id))
+FROM orders
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/*
+YEAR(order_purchase_timestamp), COUNT(DISTINCT(customer_id))
+2018, 54013
+2017, 45099
+2016, 329
+*/
+
+
+--unique customers who ordered per month
+SELECT YEAR(order_purchase_timestamp), MONTH(order_purchase_timestamp), COUNT(DISTINCT(customer_id))
+FROM orders
+GROUP BY 1, 2
+ORDER BY 1, 2;
+
+
+/*
+YEAR(order_purchase_timestamp), MONTH(order_purchase_timestamp), COUNT(DISTINCT(customer_id))
+2016, 9, 4
+2016, 10, 324
+2016, 12, 1
+2017, 1, 798
+2017, 2, 1780
+2017, 3, 2678
+2017, 4, 2402
+2017, 5, 3695
+2017, 6, 3256
+2017, 7, 4013
+2017, 8, 4337
+2017, 9, 4285
+2017, 10, 4636
+2017, 11, 7538
+2017, 12, 5681
+2018, 1, 7254
+2018, 2, 6735
+2018, 3, 7212
+2018, 4, 6930
+2018, 5, 6872
+2018, 6, 6176
+2018, 7, 6265
+2018, 8, 6549
+2018, 9, 16
+2018, 10, 4
+*/
+
+
+
+
+
+--How many different products are there in the products table? (By “different” here we mean “unique”, so you should make sure that there are no duplicate products.)
+
+SELECT COUNT(DISTINCT(product_id))
+FROM products;
+
+--32951
+
+
+
+
+
+--Which are the categories with most products? Since this is an external database and has been partially anonymised, we do not have the names of the products. But we do know to which categories do products belong. This is the closest we can get to knowing what are sellers offering in the Magist marketplace. By counting the rows in the products table and grouping them by categories, we will know how many products are offered for each category. This is not the same as how many products are actually sold by category. To acquire this insight we will have to combine multiple tables together, which we will do in the next lesson.
+
+SELECT product_category_name_translation.product_category_name_english, COUNT(DISTINCT(product_id))
+FROM products
+JOIN product_category_name_translation
+	ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/*
+# product_category_name_english, COUNT(DISTINCT(product_id))
+bed_bath_table, 3029
+sports_leisure, 2867
+furniture_decor, 2657
+health_beauty, 2444
+housewares, 2335
+auto, 1900
+computers_accessories, 1639
+toys, 1411
+watches_gifts, 1329
+telephony, 1134
+baby, 919
+perfumery, 868
+stationery, 849
+fashion_bags_accessories, 849
+cool_stuff, 789
+garden_tools, 753
+pet_shop, 719
+others, 610
+electronics, 517
+construction_tools_construction, 400
+home_appliances, 370
+luggage_accessories, 349
+consoles_games, 317
+office_furniture, 309
+musical_instruments, 289
+small_appliances, 231
+home_construction, 225
+books_general_interest, 216
+fashion_shoes, 173
+furniture_living_room, 156
+air_conditioning, 124
+books_technical, 123
+fixed_telephony, 116
+home_confort, 111
+food_drink, 104
+market_place, 104
+fashion_male_clothing, 95
+kitchen_dining_laundry_garden_furniture, 94
+signaling_and_security, 93
+construction_tools_safety, 91
+home_appliances_2, 90
+costruction_tools_garden, 88
+food, 82
+drinks, 81
+construction_tools_lights, 78
+agro_industry_and_commerce, 74
+industry_commerce_and_business, 68
+christmas_supplies, 65
+audio, 58
+art, 55
+fashion_underwear_beach, 53
+dvds_blu_ray, 48
+furniture_bedroom, 45
+costruction_tools_tools, 39
+small_appliances_home_oven_and_coffee, 31
+books_imported, 31
+computers, 30
+cine_photo, 28
+fashio_female_clothing, 27
+music, 27
+party_supplies, 26
+fashion_sport, 19
+arts_and_craftmanship, 19
+flowers, 14
+diapers_and_hygiene, 12
+la_cuisine, 10
+furniture_mattress_and_upholstery, 10
+portable_kitchen_food_processors, 10
+tablets_printing_image, 9
+home_comfort_2, 5
+fashion_childrens_clothes, 5
+pc_gamer, 3
+security_and_services, 2
+cds_dvds_musicals, 1
+*/
+
+
+
+
+
+--How many of those products were present in actual transactions? The products table is a “reference” of all the available products. Have all these products been involved in orders? Check out the order_items table to find out!
+
+SELECT product_category_name_translation.product_category_name_english, COUNT(order_items.product_id)
+FROM products
+JOIN order_items
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/*
+# product_category_name_english, COUNT(order_items.product_id)
+bed_bath_table, 11115
+health_beauty, 9670
+sports_leisure, 8641
+furniture_decor, 8334
+computers_accessories, 7827
+housewares, 6964
+watches_gifts, 5991
+telephony, 4545
+garden_tools, 4347
+auto, 4235
+toys, 4117
+cool_stuff, 3796
+perfumery, 3419
+baby, 3065
+electronics, 2767
+stationery, 2517
+fashion_bags_accessories, 2031
+pet_shop, 1947
+office_furniture, 1691
+others, 1603
+consoles_games, 1137
+luggage_accessories, 1092
+construction_tools_construction, 929
+home_appliances, 771
+musical_instruments, 680
+small_appliances, 679
+home_construction, 604
+books_general_interest, 553
+food, 510
+furniture_living_room, 503
+home_confort, 434
+drinks, 379
+audio, 364
+market_place, 311
+construction_tools_lights, 304
+air_conditioning, 297
+kitchen_dining_laundry_garden_furniture, 281
+food_drink, 278
+industry_commerce_and_business, 268
+books_technical, 267
+fixed_telephony, 264
+fashion_shoes, 262
+costruction_tools_garden, 238
+home_appliances_2, 238
+agro_industry_and_commerce, 212
+art, 209
+computers, 203
+signaling_and_security, 199
+construction_tools_safety, 194
+christmas_supplies, 153
+fashion_male_clothing, 132
+fashion_underwear_beach, 131
+furniture_bedroom, 109
+costruction_tools_tools, 103
+tablets_printing_image, 83
+small_appliances_home_oven_and_coffee, 76
+cine_photo, 72
+dvds_blu_ray, 64
+books_imported, 60
+fashio_female_clothing, 48
+party_supplies, 43
+diapers_and_hygiene, 39
+furniture_mattress_and_upholstery, 38
+music, 38
+flowers, 33
+fashion_sport, 30
+home_comfort_2, 30
+arts_and_craftmanship, 24
+portable_kitchen_food_processors, 15
+la_cuisine, 14
+cds_dvds_musicals, 14
+pc_gamer, 9
+fashion_childrens_clothes, 8
+security_and_services, 2
+*/
+
+
+
+
+
+--What’s the price for the most expensive and cheapest products? Sometimes, having a basing range of prices is informative. Looking for the maximum and minimum values is also a good way to detect extreme outliers (and maybe even suspect about  errors in the data).
+
+--MAX and MIN from whole catalogue
+SELECT MAX(price), MIN(price)
+FROM order_items;
+
+/*
+MAX(price), MIN(price)
+6735, 0.85
+*/
+
+
+
+--Max and MIN by category
+SELECT product_category_name_translation.product_category_name_english, MAX(order_items.price), MIN(order_items.price)
+FROM products
+JOIN order_items
+	ON products.product_id = order_items.product_id
+JOIN product_category_name_translation
+	ON products.product_category_name = product_category_name_translation.product_category_name
+GROUP BY 1
+ORDER BY 1;
+
+/*
+# product_category_name_english, MAX(order_items.price), MIN(order_items.price)
+agro_industry_and_commerce, 2990, 12.99
+air_conditioning, 1599, 10.9
+art, 6499, 3.5
+arts_and_craftmanship, 289.49, 9.8
+audio, 598.99, 14.9
+auto, 2258, 3.49
+baby, 3899, 3.54
+bed_bath_table, 1999.98, 6.99
+books_general_interest, 899.9, 6
+books_imported, 749, 18.99
+books_technical, 384.93, 9.95
+cds_dvds_musicals, 65, 45
+christmas_supplies, 295, 5.5
+cine_photo, 873.99, 6.8
+computers, 6729, 34.5
+computers_accessories, 3699.99, 3.9
+consoles_games, 4099.99, 5.18
+construction_tools_construction, 2300, 0.85
+construction_tools_lights, 1290, 12.51
+construction_tools_safety, 3099.9, 8.9
+cool_stuff, 3109.99, 7
+costruction_tools_garden, 1349.9, 8.82
+costruction_tools_tools, 1899, 6.8
+diapers_and_hygiene, 139.89, 25
+drinks, 623, 6
+dvds_blu_ray, 1420, 8.9
+electronics, 2470.5, 3.99
+fashio_female_clothing, 198.9, 19.9
+fashion_bags_accessories, 1699.99, 6
+fashion_childrens_clothes, 110, 39.99
+fashion_male_clothing, 292.5, 14.9
+fashion_shoes, 365, 25.9
+fashion_sport, 225, 24.99
+fashion_underwear_beach, 192, 3.9
+fixed_telephony, 1790, 6
+flowers, 65.9, 15.6
+food, 274.99, 9.99
+food_drink, 699.9, 6.5
+furniture_bedroom, 650, 6.9
+furniture_decor, 1899, 4.9
+furniture_living_room, 839.99, 13.9
+furniture_mattress_and_upholstery, 399.99, 44.7
+garden_tools, 3930, 6.35
+health_beauty, 3124, 1.2
+home_appliances, 2090, 6.19
+home_appliances_2, 2350, 13.9
+home_comfort_2, 219.99, 12.9
+home_confort, 799, 6.99
+home_construction, 1097.99, 8.97
+housewares, 6735, 3.06
+industry_commerce_and_business, 3089, 27.9
+kitchen_dining_laundry_garden_furniture, 1320, 9.6
+la_cuisine, 389, 24
+luggage_accessories, 1197.9, 13.33
+market_place, 1964, 9.99
+music, 1165.97, 3.85
+musical_instruments, 4399.87, 4.9
+office_furniture, 1189.9, 25
+others, 3980, 3
+party_supplies, 571.2, 7.99
+pc_gamer, 239, 129.99
+perfumery, 689.9, 4.99
+pet_shop, 2498, 2.9
+portable_kitchen_food_processors, 1099, 17.42
+security_and_services, 183.29, 100
+signaling_and_security, 740, 4.5
+small_appliances, 4799, 6.5
+small_appliances_home_oven_and_coffee, 2899, 10.19
+sports_leisure, 4059, 4.5
+stationery, 1693, 2.29
+tablets_printing_image, 889.99, 14.9
+telephony, 2428, 5
+toys, 1699.99, 4.9
+watches_gifts, 3999.9, 8.99
+*/
+
+
+
+
+
+
+--What are the highest and lowest payment values? Some orders contain multiple products. What’s the highest someone has paid for an order? Look at the order_payments table and try to find it out.
+
+--highest paid
+SELECT order_id, (payment_value * payment_installments) AS total_paid
+FROM order_payments
+ORDER BY 2 DESC
+LIMIT 10;
+
+/*
+# order_id, total_paid
+0812eb902a67711a1cb742b3cdaa65ae, 55434.48046875
+a96610ab360d42a2e5335a3998b4718a, 49503.3984375
+426a9742b533fc6fed17d1fd6d143d7e, 45133.1982421875
+68101694e5c5dc7330c91e1bbc36214f, 41752.59765625
+fbc8e8d5591dc594ede3b88033625bd0, 40446.59912109375
+39a6ecead949b006d60a132d146ea284, 39716.400146484375
+9de73f3e6157169ad6c32b9f313c7dcb, 38990
+a53e05ecd2ed1f46a2b8e1f5828be7c6, 38268.00048828125
+199af31afc78c699f0dbf71fb178d4d4, 38114.71875
+fc20b8e282da6f3fbcdd3a3cedecb723, 37821.8994140625
+*/
+
+
+
+--lowest paid
+SELECT order_id, (payment_value * payment_installments) AS total_paid
+FROM order_payments
+ORDER BY 2
+LIMIT 10;
+
+/*
+# order_id, total_paid
+fa65dad1b0e818e3ccc5cb0e39231352, 0
+fa65dad1b0e818e3ccc5cb0e39231352, 0
+45ed6e85398a87c253db47c2d9f48216, 0
+744bade1fcf9ff3f31d860ace076d422, 0
+6ccb433e00daae1283ccc956189c82ae, 0
+4637ca194b6387e2d538dc89b124b0ee, 0
+c8c528189310eaa44a745b8d9d26908b, 0
+8bcbe01d44d147f901cd3192671144db, 0
+00b1cb0320190ca0daa2c88b35206009, 0
+1a57108394169c0b47d8f876acc9ba2d, 0
+*/
